@@ -6,6 +6,9 @@ class Vendor(models.Model):
     identifier = models.AutoField(primary_key=True)
     credit = models.PositiveIntegerField(null=False, default=0)
 
+    def __str__(self):
+        return f"vendor with id: {self.identifier} and credit: {self.credit}"
+
 
 class PhoneNumber(models.Model):
     phone_regex = RegexValidator(
@@ -17,5 +20,6 @@ class PhoneNumber(models.Model):
 class Transaction(models.Model):
     identifier = models.AutoField(primary_key=True)
     vendor = models.OneToOneField(to=Vendor, on_delete=models.DO_NOTHING)
-    phone_number = models.OneToOneField(to=PhoneNumber, on_delete=models.DO_NOTHING)
+    phone_number = models.OneToOneField(
+        to=PhoneNumber, on_delete=models.DO_NOTHING)
     charge = models.PositiveIntegerField(blank=False, null=False)
