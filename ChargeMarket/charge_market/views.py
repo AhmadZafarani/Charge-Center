@@ -19,3 +19,17 @@ def add_vendor(request: HttpRequest) -> HttpResponse:
     except IntegrityError:
         return HttpResponseBadRequest(error_string)
     return HttpResponse()
+
+
+def add_phone_number(request: HttpRequest) -> HttpResponse:
+    phone_number_value = request.GET.get("phone_number")
+    if phone_number_value is None:
+        return HttpResponseBadRequest("phone_number not found!")
+    phone_number = PhoneNumber()
+    phone_number.phone_number = phone_number_value
+    error_string = "phone number not valid! Example: 09123456789"
+    try:
+        phone_number.save()
+    except IntegrityError:
+        return HttpResponseBadRequest(error_string)
+    return HttpResponse()

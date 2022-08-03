@@ -1,4 +1,6 @@
+from django.db import IntegrityError
 from django.db.transaction import atomic
+from django.forms import ValidationError
 from django.test import TestCase
 
 from .models import *
@@ -55,3 +57,43 @@ class AddVendorTests(TestCase):
             response = self.client.get('/addVendor?credit=1.2')
         self.assertNotEqual(response.status_code, 200)
         self.assertEqual(Vendor.objects.count(), 0)
+
+
+class AddPhoneNumberTests(TestCase):
+    def test_add_phone_number(self):
+        response = self.client.get('/addPhoneNumber?phone_number=09356292458')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(PhoneNumber.objects.count(), 1)
+        phone_number = PhoneNumber.objects.all()[0]
+        self.assertEqual(phone_number.phone_number, '09356292458')
+
+    def test_add_multiple_phone_numbers(self):
+        response = self.client.get('/addPhoneNumber?phone_number=09356292458')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(PhoneNumber.objects.count(), 1)
+        phone_number = PhoneNumber.objects.all()[0]
+        self.assertEqual(phone_number.phone_number, '09356292458')
+
+        response = self.client.get('/addPhoneNumber?phone_number=09356292457')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(PhoneNumber.objects.count(), 2)
+        phone_number = PhoneNumber.objects.all()[1]
+        self.assertEqual(phone_number.phone_number, '09356292457')
+
+    def test_add_phone_number_multiple_times(self):
+        PhoneNumber.objects.create(phone_number='09356292457')
+        with self.assertRaises(IntegrityError):
+            PhoneNumber.objects.create(phone_number='09356292457')
+
+    def test_add_invalid_phone_number(self):
+        phone_number = PhoneNumber.objects.create(phone_number='salam')
+        with self.assertRaises(ValidationError):
+            phone_number.full_clean()
+
+        phone_number = PhoneNumber.objects.create(phone_number='1234567890')
+        with self.assertRaises(ValidationError):
+            phone_number.full_clean()
+
+        phone_number = PhoneNumber.objects.create(phone_number='091234567890')
+        with self.assertRaises(ValidationError):
+            phone_number.full_clean()

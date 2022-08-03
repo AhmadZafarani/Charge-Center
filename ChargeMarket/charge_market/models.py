@@ -11,10 +11,10 @@ class Vendor(models.Model):
 
 
 class PhoneNumber(models.Model):
-    phone_regex = RegexValidator(
+    _phone_regex = RegexValidator(
         regex=r'^09\d{9}$', message="Phone number must be entered in the format: '09123456789'.")
     phone_number = models.CharField(
-        validators=[phone_regex], max_length=11, primary_key=True)
+        validators=[_phone_regex], max_length=11, primary_key=True)
 
 
 class Transaction(models.Model):
