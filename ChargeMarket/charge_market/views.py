@@ -1,5 +1,6 @@
 from django.db import IntegrityError
-from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest
+from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
+from django.shortcuts import get_object_or_404
 
 from .models import *
 
@@ -32,4 +33,37 @@ def add_phone_number(request: HttpRequest) -> HttpResponse:
         phone_number.save()
     except IntegrityError:
         return HttpResponseBadRequest(error_string)
+    return HttpResponse()
+
+
+def charge(request: HttpRequest) -> HttpResponse:
+    vendor_id = request.POST.get("vendor_id")
+    if vendor_id is None:
+        return HttpResponseBadRequest("vendor_id not found!")
+    charge = request.POST.get("charge")
+    if charge is None:
+        return HttpResponseBadRequest("charge not found!")
+
+    vendor = Vendor.objects.get(identifier=vendor_id)
+    if vendor is None:
+        return HttpResponseBadRequest("vendor with specified id not found!")
+
+    return HttpResponse()
+
+
+def increase_credit(request: HttpRequest) -> HttpResponse:
+    vendor_id = request.POST.get("vendor_id")
+    if vendor_id is None:
+        return HttpResponseBadRequest("vendor_id not found!")
+    charge = request.POST.get("charge")
+    if charge is None:
+        return HttpResponseBadRequest("charge not found!")
+
+    vendor = Vendor.objects.get(pk=vendor_id)
+    if vendor is None:
+        return HttpResponseNotFound("vendor with specified id not found!")
+    transaction = ChargeTransaction()
+    transaction.vendor = vendor
+    transaction.charge(charge)
+
     return HttpResponse()

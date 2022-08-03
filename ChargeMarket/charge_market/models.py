@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from django.core.validators import RegexValidator
 from django.db import models
 
@@ -15,11 +16,35 @@ class PhoneNumber(models.Model):
         regex=r'^09\d{9}$', message="Phone number must be entered in the format: '09123456789'.")
     phone_number = models.CharField(
         validators=[_phone_regex], max_length=11, primary_key=True)
+    charge = models.PositiveIntegerField(default=0)
 
 
 class Transaction(models.Model):
     identifier = models.AutoField(primary_key=True)
-    vendor = models.OneToOneField(to=Vendor, on_delete=models.DO_NOTHING)
+    vendor = models.OneToOneField(to=Vendor, on_delete=models.DO_NOTHING, blank=False)
+    amount = models.PositiveIntegerField(blank=False, null=False)
+
+    @abstractmethod
+    def charge(self, amount: int):
+        pass
+
+
+class ChargeTransaction(Transaction):
+    def charge(self, amount: int):
+        assert isinstance(amount, int)
+        assert amount > 0
+
+        self.amount = amount
+        self.vendor.credit += amount
+
+
+class SellTransaction(Transaction):
     phone_number = models.OneToOneField(
         to=PhoneNumber, on_delete=models.DO_NOTHING)
-    charge = models.PositiveIntegerField(blank=False, null=False)
+
+    def charge(self, amount: int):
+        assert isinstance(amount, int)
+        assert amount > 0
+
+        self.vendor.credit -= amount
+        self.phone_number.charge += amount
