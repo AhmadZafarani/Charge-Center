@@ -4,43 +4,28 @@ from django.forms import ValidationError
 from django.test import TestCase
 
 from .models import *
+from .utils import add_vendor
 
 
 class VendorModelTest(TestCase):
     def test_string_representation(self):
         vendor = Vendor()
         vendor.identifier = 1
-        vendor.credit = 200
+        vendor._credit = 200
         self.assertEqual(str(vendor), f"vendor with id: 1 and credit: 200")
 
 
-class addVendorTests(TestCase):
+class AddVendorTests(TestCase):
     def test_empty_arguments(self):
         response = self.client.get('/add-vendor')
         self.assertEqual(response.status_code, 400)
 
     def test_add_vendor(self):
-        response = self.client.get('/add-vendor?credit=21')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(Vendor.objects.count(), 1)
-        vendor = Vendor.objects.all()[0]
-        self.assertEqual(vendor.identifier, 1)
-        self.assertEqual(vendor.credit, 21)
+        add_vendor(self, 1, 21)
 
     def test_add_multiple_vendors(self):
-        response = self.client.get('/add-vendor?credit=21')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(Vendor.objects.count(), 1)
-        vendor = Vendor.objects.all()[0]
-        self.assertEqual(vendor.identifier, 1)
-        self.assertEqual(vendor.credit, 21)
-
-        response = self.client.get('/add-vendor?credit=25')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(Vendor.objects.count(), 2)
-        vendor = Vendor.objects.all()[1]
-        self.assertEqual(vendor.identifier, 2)
-        self.assertEqual(vendor.credit, 25)
+        add_vendor(self, 1, 21)
+        add_vendor(self, 2, 25)
 
     def test_add_vendor_negative_credit(self):
         with atomic():
@@ -49,12 +34,7 @@ class addVendorTests(TestCase):
         self.assertEqual(Vendor.objects.count(), 0)
 
     def test_add_vendor_zero_credit(self):
-        response = self.client.get('/add-vendor?credit=0')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(Vendor.objects.count(), 1)
-        vendor = Vendor.objects.all()[0]
-        self.assertEqual(vendor.identifier, 1)
-        self.assertEqual(vendor.credit, 0)
+        add_vendor(self, 1, 0)
 
     def test_add_vendor_float_credit(self):
         with atomic():
@@ -108,3 +88,38 @@ class AddPhoneNumberTests(TestCase):
         phone_number = PhoneNumber.objects.create(phone_number='091234567890')
         with self.assertRaises(ValidationError):
             phone_number.full_clean()
+
+
+class IncreaseVendorCreditTests(TestCase):
+    def test_empty_arguments(self):
+        response = self.client.post('/increase-credit')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.content.decode(
+            "utf-8"), "vendor_id not found!")
+
+        response = self.client.post('/increase-credit', {"vendor_id": "1"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.content.decode("utf-8"), "charge not found!")
+
+        response = self.client.post('/increase-credit', {"charge": "1"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.content.decode(
+            "utf-8"), "vendor_id not found!")
+
+    def test_increase_not_existing_vendor_credit(self):
+        response = self.client.post(
+            '/increase-credit', {"vendor_id": "1", "charge": "200"})
+        self.assertEqual(response.status_code, 404)
+
+    def test_increase_vendor_credit(self):
+        vendor = add_vendor(self, 1, 21)
+        response = self.client.post(
+            '/increase-credit', {"vendor_id": "1", "charge": "200"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ChargeTransaction.objects.count(), 1)
+        transaction = ChargeTransaction.objects.all()[0]
+        self.assertEqual(transaction.identifier, 1)
+        self.assertEqual(transaction.amount, 200)
+        self.assertEqual(transaction.vendor, vendor)
+        vendor.refresh_from_db()
+        self.assertEqual(vendor._credit, 221)

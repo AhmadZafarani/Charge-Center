@@ -1,5 +1,5 @@
 from django.db import IntegrityError
-from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
+from django.http import (HttpRequest, HttpResponse, HttpResponseBadRequest)
 from django.shortcuts import get_object_or_404
 
 from .models import *
@@ -12,7 +12,7 @@ def add_vendor(request: HttpRequest) -> HttpResponse:
     vendor = Vendor()
     error_string = "credit must be a positive Integer!"
     try:
-        vendor.credit = int(credit)
+        vendor.set_credit(int(credit))
     except ValueError:
         return HttpResponseBadRequest(error_string)
     try:
@@ -36,21 +36,6 @@ def add_phone_number(request: HttpRequest) -> HttpResponse:
     return HttpResponse()
 
 
-def charge(request: HttpRequest) -> HttpResponse:
-    vendor_id = request.POST.get("vendor_id")
-    if vendor_id is None:
-        return HttpResponseBadRequest("vendor_id not found!")
-    charge = request.POST.get("charge")
-    if charge is None:
-        return HttpResponseBadRequest("charge not found!")
-
-    vendor = Vendor.objects.get(identifier=vendor_id)
-    if vendor is None:
-        return HttpResponseBadRequest("vendor with specified id not found!")
-
-    return HttpResponse()
-
-
 def increase_credit(request: HttpRequest) -> HttpResponse:
     vendor_id = request.POST.get("vendor_id")
     if vendor_id is None:
@@ -59,11 +44,17 @@ def increase_credit(request: HttpRequest) -> HttpResponse:
     if charge is None:
         return HttpResponseBadRequest("charge not found!")
 
-    vendor = Vendor.objects.get(pk=vendor_id)
-    if vendor is None:
-        return HttpResponseNotFound("vendor with specified id not found!")
+    vendor = get_object_or_404(Vendor, pk=vendor_id)
     transaction = ChargeTransaction()
     transaction.vendor = vendor
+    try:
+        charge = int(charge)
+    except ValueError:
+        return HttpResponseBadRequest("charge must be a Positive Integer!")
+
+    transaction.amount = charge
+    transaction.save()
+
     transaction.charge(charge)
 
     return HttpResponse()

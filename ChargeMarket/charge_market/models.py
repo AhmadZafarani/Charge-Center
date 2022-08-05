@@ -1,14 +1,21 @@
 from abc import abstractmethod
+
 from django.core.validators import RegexValidator
 from django.db import models
 
 
 class Vendor(models.Model):
     identifier = models.AutoField(primary_key=True)
-    credit = models.PositiveIntegerField(null=False, default=0)
+    _credit = models.PositiveIntegerField(null=False, default=0)
+
+    def set_credit(self, credit: int):
+        self._credit = credit
+
+    def get_credit(self) -> int:
+        return self._credit
 
     def __str__(self):
-        return f"vendor with id: {self.identifier} and credit: {self.credit}"
+        return f"vendor with id: {self.identifier} and credit: {self._credit}"
 
 
 class PhoneNumber(models.Model):
@@ -21,7 +28,8 @@ class PhoneNumber(models.Model):
 
 class Transaction(models.Model):
     identifier = models.AutoField(primary_key=True)
-    vendor = models.OneToOneField(to=Vendor, on_delete=models.DO_NOTHING, blank=False)
+    vendor = models.OneToOneField(
+        to=Vendor, on_delete=models.DO_NOTHING, blank=False)
     amount = models.PositiveIntegerField(blank=False, null=False)
 
     @abstractmethod
@@ -34,8 +42,9 @@ class ChargeTransaction(Transaction):
         assert isinstance(amount, int)
         assert amount > 0
 
-        self.amount = amount
-        self.vendor.credit += amount
+        new_amount = self.vendor.get_credit() + amount
+        Vendor.objects.filter(identifier=self.vendor.identifier).update(
+            _credit=new_amount)
 
 
 class SellTransaction(Transaction):
