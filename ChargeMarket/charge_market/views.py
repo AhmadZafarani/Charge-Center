@@ -53,8 +53,37 @@ def increase_credit(request: HttpRequest) -> HttpResponse:
         return HttpResponseBadRequest("charge must be a Positive Integer!")
 
     transaction.amount = charge
-    transaction.save()
 
     transaction.charge(charge)
+    transaction.save()
+
+    return HttpResponse()
+
+
+def sell_charge(request: HttpRequest) -> HttpResponse:
+    vendor_id = request.POST.get("vendor_id")
+    if vendor_id is None:
+        return HttpResponseBadRequest("vendor_id not found!")
+    phone_number = request.POST.get("phone_number")
+    if phone_number is None:
+        return HttpResponseBadRequest("phone_number not found!")
+    charge = request.POST.get("charge")
+    if charge is None:
+        return HttpResponseBadRequest("charge not found!")
+
+    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    phone_number = get_object_or_404(PhoneNumber, pk=phone_number)
+    transaction = SellTransaction()
+    transaction.vendor = vendor
+    transaction.phone_number = phone_number
+    try:
+        charge = int(charge)
+    except ValueError:
+        return HttpResponseBadRequest("charge must be a Positive Integer!")
+
+    transaction.amount = charge
+
+    transaction.charge(charge)
+    transaction.save()
 
     return HttpResponse()

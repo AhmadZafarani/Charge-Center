@@ -151,3 +151,19 @@ class IncreaseVendorCreditTests(TestCase):
         increase_vendor_credit(self, 4, vendor_id, 500,
                                first_credit + 400, vendor)
 
+
+class SellChargeTests(TestCase):
+    def test_empty_arguments(self):
+        response = self.client.post('/sell-charge')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.content.decode(
+            "utf-8"), "vendor_id not found!")
+
+        response = self.client.post('/sell-charge', {"vendor_id": "1"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.content.decode("utf-8"), "charge not found!")
+
+        response = self.client.post('/sell-charge', {"charge": "1"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.content.decode(
+            "utf-8"), "vendor_id not found!")

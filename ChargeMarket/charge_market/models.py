@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
 from django.core.validators import RegexValidator
-from django.db import models
+from django.db import IntegrityError, models
 
 
 class Vendor(models.Model):
@@ -48,12 +48,19 @@ class ChargeTransaction(Transaction):
 
 
 class SellTransaction(Transaction):
-    phone_number = models.OneToOneField(
-        to=PhoneNumber, on_delete=models.DO_NOTHING)
+    phone_number = models.ForeignKey(
+        to=PhoneNumber, on_delete=models.DO_NOTHING, blank=False, null=False)
 
     def charge(self, amount: int):
         assert isinstance(amount, int)
         assert amount > 0
 
-        self.vendor.credit -= amount
-        self.phone_number.charge += amount
+        new_amount = self.vendor.get_credit() - amount
+        if new_amount < 0:
+            raise IntegrityError("not enough credit to sell this charge")
+        Vendor.objects.filter(identifier=self.vendor.identifier).update(
+            _credit=new_amount)
+
+        new_charge = self.phone_number.charge + amount
+        PhoneNumber.objects.filter(phone_number=self.phone_number.phone_number).update(
+            charge=new_charge)
