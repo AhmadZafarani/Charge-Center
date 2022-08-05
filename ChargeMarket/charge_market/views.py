@@ -1,5 +1,5 @@
 from django.db import IntegrityError
-from django.http import (HttpRequest, HttpResponse, HttpResponseBadRequest)
+from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 
 from .models import *

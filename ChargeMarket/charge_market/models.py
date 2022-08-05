@@ -28,8 +28,8 @@ class PhoneNumber(models.Model):
 
 class Transaction(models.Model):
     identifier = models.AutoField(primary_key=True)
-    vendor = models.OneToOneField(
-        to=Vendor, on_delete=models.DO_NOTHING, blank=False)
+    vendor = models.ForeignKey(
+        to=Vendor, on_delete=models.DO_NOTHING, blank=False, null=False)
     amount = models.PositiveIntegerField(blank=False, null=False)
 
     @abstractmethod
