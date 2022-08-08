@@ -4,7 +4,7 @@ from django.forms import ValidationError
 from django.test import TestCase
 
 from .models import *
-from .test_utils import add_vendor, increase_vendor_credit
+from .test_utils import *
 
 
 class VendorModelTest(TestCase):
@@ -49,27 +49,18 @@ class AddPhoneNumberTests(TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test_add_phone_number(self):
-        response = self.client.get(
-            '/add-phone-number?phone_number=09356292458')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(PhoneNumber.objects.count(), 1)
-        phone_number = PhoneNumber.objects.all()[0]
-        self.assertEqual(phone_number.phone_number, '09356292458')
+        index = 1
+        phone_number = '09356292458'
+        add_phone_number(self, index, phone_number)
 
     def test_add_multiple_phone_numbers(self):
-        response = self.client.get(
-            '/add-phone-number?phone_number=09356292458')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(PhoneNumber.objects.count(), 1)
-        phone_number = PhoneNumber.objects.all()[0]
-        self.assertEqual(phone_number.phone_number, '09356292458')
+        index = 1
+        phone_number = '09356292458'
+        add_phone_number(self, index, phone_number)
 
-        response = self.client.get(
-            '/add-phone-number?phone_number=09356292457')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(PhoneNumber.objects.count(), 2)
-        phone_number = PhoneNumber.objects.all()[1]
-        self.assertEqual(phone_number.phone_number, '09356292457')
+        index = 2
+        phone_number = '09356292457'
+        add_phone_number(self, index, phone_number)
 
     def test_add_phone_number_multiple_times(self):
         PhoneNumber.objects.create(phone_number='09356292457')
@@ -161,9 +152,89 @@ class SellChargeTests(TestCase):
 
         response = self.client.post('/sell-charge', {"vendor_id": "1"})
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.content.decode("utf-8"), "charge not found!")
+        self.assertEqual(response.content.decode(
+            "utf-8"), "phone_number not found!")
 
-        response = self.client.post('/sell-charge', {"charge": "1"})
+        response = self.client.post(
+            '/sell-charge', {"vendor_id": "1", "phone_number": "09123456789"})
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.content.decode(
-            "utf-8"), "vendor_id not found!")
+            "utf-8"), "charge not found!")
+
+    def test_sell_charge_from_not_existing_vendor(self):
+        response = self.client.post(
+            '/sell-charge', {"vendor_id": "1", "phone_number": "09123456789", "charge": "200"})
+        self.assertEqual(response.status_code, 404)
+
+    def test_sell_charge_to_not_existing_phone_number(self):
+        vendor_id = 1
+        first_credit = 21
+        add_vendor(self, vendor_id, first_credit)
+        response = self.client.post(
+            '/sell-charge', {"vendor_id": "1", "phone_number": "09123456789", "charge": "200"})
+        self.assertEqual(response.status_code, 404)
+
+    def test_sell_charge_more_than_credit(self):
+        vendor_id = 1
+        first_credit = 21
+        add_vendor(self, vendor_id, first_credit)
+        index = 1
+        phone_number = '09356292458'
+        add_phone_number(self, index, phone_number)
+        sell_more_than_credit_charge(
+            self, vendor_id, phone_number, first_credit+10)
+
+    def test_sell_charge(self):
+        vendor_id = 1
+        first_credit = 21
+        vendor = add_vendor(self, vendor_id, first_credit)
+        index = 1
+        phone_number_value = '09356292458'
+        phone_number = add_phone_number(self, index, phone_number_value)
+        sell_charge(self, 1, vendor, phone_number, 10, first_credit)
+
+    def one_vendor_sell_charge_to_one_phone_number_multiple_times(self):
+        vendor_id = 1
+        first_credit = 21
+        vendor = add_vendor(self, vendor_id, first_credit)
+        index = 1
+        phone_number_value = '09356292458'
+        phone_number = add_phone_number(self, index, phone_number_value)
+        sell_charge(self, 1, vendor, phone_number, 10, first_credit)
+        sell_charge(self, 2, vendor, phone_number, 10, first_credit-10, 10)
+        sell_more_than_credit_charge(self, vendor_id, phone_number)
+
+    def one_vendor_sell_charge_to_multiple_phone_numbers(self):
+        vendor_id = 1
+        first_credit = 21
+        vendor = add_vendor(self, vendor_id, first_credit)
+        index = 1
+        phone_number_value = '09356292458'
+        phone_number = add_phone_number(self, index, phone_number_value)
+        sell_charge(self, 1, vendor, phone_number, 10, first_credit)
+        index = 2
+        phone_number_value = '09356292457'
+        phone_number = add_phone_number(self, index, phone_number_value)
+        sell_charge(self, 2, vendor, phone_number, 10, first_credit-10)
+        index = 2
+        phone_number_value = '09356292456'
+        phone_number = add_phone_number(self, index, phone_number_value)
+        sell_more_than_credit_charge(self, vendor_id, phone_number)
+
+    def multiple_vendors_sell_charge_to_one_phone_number(self):
+        vendor_id_1 = 1
+        first_credit_1 = 21
+        vendor_1 = add_vendor(self, vendor_id_1, first_credit_1)
+        vendor_id_2 = 2
+        first_credit_2 = 31
+        vendor_2 = add_vendor(self, vendor_id_2, first_credit_2)
+        index = 1
+        phone_number_value = '09356292458'
+        phone_number = add_phone_number(self, index, phone_number_value)
+        sell_charge(self, 1, vendor_1, phone_number, 10, first_credit_1)
+        sell_charge(self, 2, vendor_2, phone_number, 10, first_credit_2, 10)
+        sell_charge(self, 3, vendor_1, phone_number, 10, first_credit_1-10, 20)
+        sell_charge(self, 4, vendor_2, phone_number, 10, first_credit_2-10, 30)
+        sell_more_than_credit_charge(self, vendor_id_1, phone_number)
+        sell_charge(self, 5, vendor_2, phone_number, 10, first_credit_2-20, 40)
+        sell_more_than_credit_charge(self, vendor_id_2, phone_number)

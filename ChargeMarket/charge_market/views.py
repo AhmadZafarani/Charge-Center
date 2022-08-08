@@ -80,10 +80,12 @@ def sell_charge(request: HttpRequest) -> HttpResponse:
         charge = int(charge)
     except ValueError:
         return HttpResponseBadRequest("charge must be a Positive Integer!")
-
     transaction.amount = charge
 
-    transaction.charge(charge)
+    try:
+        transaction.charge(charge)
+    except IntegrityError as e:
+        return HttpResponseBadRequest(e.with_traceback(None))
     transaction.save()
 
     return HttpResponse()
