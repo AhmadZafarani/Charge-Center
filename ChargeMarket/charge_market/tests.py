@@ -1,3 +1,4 @@
+import imp
 from django.db import IntegrityError
 from django.db.transaction import atomic
 from django.forms import ValidationError
@@ -240,3 +241,36 @@ class SellChargeTests(TestCase):
         sell_more_than_credit_charge(self, vendor_id_1, phone_number)
         sell_charge(self, 5, vendor_2, phone_number, 10, first_credit_2-20, 40)
         sell_more_than_credit_charge(self, vendor_id_2, phone_number)
+
+
+class IntegrationTest(TestCase):
+    def test_multiple_vendors_multiple_sells(self):
+        vendors = add_vendors(self, 2)
+        vendor_transactions_dict = {}
+        for v in vendors:
+            vendor_transactions_dict[v] = [v.get_credit()]
+
+        i = 0
+        for v in vendors:
+            i = increase_vendor_credit_randomly(
+                self, v, i, vendor_transactions_dict)
+            i = increase_vendor_credit_randomly(
+                self, v, i, vendor_transactions_dict)
+
+        phone_numbers = add_phone_numbers(self, 3)
+        for v in vendors:
+            for _ in range(10):
+                i += 1
+                idx = randint(0, len(phone_numbers) - 1)
+                pn = phone_numbers[idx]
+                charge = randint(10, 100)
+                sell_charge(self, i, v, pn, charge, v.get_credit(), pn.charge)
+                transactions = vendor_transactions_dict[v]
+                transactions.append(-charge)
+
+        self.assertEqual(Transaction.objects.count(), i)
+        for v in vendors:
+            transactions = vendor_transactions_dict[v]
+            self.assertEqual(len(transactions) - 1, i // len(vendors))
+            vendor_credit = sum(transactions)
+            self.assertEqual(v.get_credit(), vendor_credit)

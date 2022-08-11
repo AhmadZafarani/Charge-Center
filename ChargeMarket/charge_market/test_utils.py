@@ -1,3 +1,5 @@
+from random import randint
+
 from django.test import TestCase
 
 from .models import PhoneNumber, Transaction, Vendor
@@ -67,3 +69,31 @@ def sell_more_than_credit_charge(test_case_obj: TestCase, vendor_id: int,
     test_case_obj.assertEqual(response.status_code, 400)
     test_case_obj.assertEqual(response.content.decode(
         "utf-8"), "not enough credit to sell this charge")
+
+
+def add_vendors(test_case_obj: TestCase, count: int) -> list:
+    vendors = []
+    for i in range(1, count):
+        first_credit = randint(0, 100)
+        vendor = add_vendor(test_case_obj, i, first_credit)
+        vendors.append(vendor)
+    return vendors
+
+
+def add_phone_numbers(test_case_obj: TestCase, count: int) -> list:
+    phone_numbers = []
+    for i in range(1, count):
+        phone_number_value = f'0935629245{i}'
+        phone_number = add_phone_number(test_case_obj, i, phone_number_value)
+        phone_numbers.append(phone_number)
+    return phone_numbers
+
+
+def increase_vendor_credit_randomly(test_case_obj: TestCase, vendor: Vendor, transaction_identifier: int, vendor_transactions_dict: dict) -> int:
+    transaction_identifier += 1
+    charge = randint(100, 1000)
+    increase_vendor_credit(
+        test_case_obj, transaction_identifier, vendor.identifier, charge, vendor.get_credit(), vendor)
+    transactions = vendor_transactions_dict[vendor]
+    transactions.append(charge)
+    return transaction_identifier
