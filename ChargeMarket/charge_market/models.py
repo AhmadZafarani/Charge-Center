@@ -26,6 +26,9 @@ class PhoneNumber(models.Model):
         validators=[_phone_regex], max_length=11, primary_key=True)
     charge = models.PositiveIntegerField(default=0)
 
+    def __str__(self):
+        return f"phone number with number: {self.phone_number} and charge: {self.charge}"
+
 
 class Transaction(models.Model):
     identifier = models.AutoField(primary_key=True)

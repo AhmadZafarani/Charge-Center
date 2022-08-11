@@ -1,8 +1,13 @@
+import logging
+
 from django.db import IntegrityError
 from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 
 from .models import *
+
+
+logger = logging.getLogger(__name__)
 
 
 def add_vendor(request: HttpRequest) -> HttpResponse:
@@ -19,7 +24,10 @@ def add_vendor(request: HttpRequest) -> HttpResponse:
         vendor.save()
     except IntegrityError:
         return HttpResponseBadRequest(error_string)
-    return HttpResponse()
+
+    success_message = f"{vendor} created successfully!"
+    logger.info(success_message)
+    return HttpResponse(success_message)
 
 
 def add_phone_number(request: HttpRequest) -> HttpResponse:
@@ -33,7 +41,10 @@ def add_phone_number(request: HttpRequest) -> HttpResponse:
         phone_number.save()
     except IntegrityError:
         return HttpResponseBadRequest(error_string)
-    return HttpResponse()
+
+    success_message = f"{phone_number} created successfully!"
+    logger.info(success_message)
+    return HttpResponse(success_message)
 
 
 def increase_credit(request: HttpRequest) -> HttpResponse:
@@ -57,7 +68,9 @@ def increase_credit(request: HttpRequest) -> HttpResponse:
     transaction.charge(charge)
     transaction.save()
 
-    return HttpResponse()
+    success_message = f"credit of {vendor} increased successfully {charge}$!"
+    logger.info(success_message)
+    return HttpResponse(success_message)
 
 
 def sell_charge(request: HttpRequest) -> HttpResponse:
@@ -88,4 +101,6 @@ def sell_charge(request: HttpRequest) -> HttpResponse:
         return HttpResponseBadRequest(e.with_traceback(None))
     transaction.save()
 
-    return HttpResponse()
+    success_message = f"{vendor} sold {charge}$ charge to {phone_number}  successfully!"
+    logger.info(success_message)
+    return HttpResponse(success_message)
