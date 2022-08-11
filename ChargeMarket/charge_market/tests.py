@@ -163,7 +163,8 @@ class SellChargeTests(TestCase):
 
     def test_sell_charge_from_not_existing_vendor(self):
         response = self.client.post(
-            '/sell-charge', {"vendor_id": "1", "phone_number": "09123456789", "charge": "200"})
+            '/sell-charge', {"vendor_id": "1", "phone_number": "09123456789",
+                             "charge": "200"})
         self.assertEqual(response.status_code, 404)
 
     def test_sell_charge_to_not_existing_phone_number(self):
@@ -171,7 +172,8 @@ class SellChargeTests(TestCase):
         first_credit = 21
         add_vendor(self, vendor_id, first_credit)
         response = self.client.post(
-            '/sell-charge', {"vendor_id": "1", "phone_number": "09123456789", "charge": "200"})
+            '/sell-charge', {"vendor_id": "1", "phone_number": "09123456789",
+                             "charge": "200"})
         self.assertEqual(response.status_code, 404)
 
     def test_sell_charge_more_than_credit(self):
