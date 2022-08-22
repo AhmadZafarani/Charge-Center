@@ -88,9 +88,8 @@ def add_phone_numbers(test_case_obj: TestCase, count: int) -> list:
     return phone_numbers
 
 
-def increase_vendor_credit_randomly(test_case_obj: TestCase, vendor: Vendor, transaction_identifier: int, vendor_transactions_dict: dict) -> int:
+def increase_vendor_credit_randomly(test_case_obj: TestCase, vendor: Vendor, transaction_identifier: int, vendor_transactions_dict: dict, charge: int) -> int:
     transaction_identifier += 1
-    charge = randint(101, 1000)
     increase_vendor_credit(
         test_case_obj, transaction_identifier, vendor.identifier, charge, vendor.get_credit(), vendor)
     transactions = vendor_transactions_dict[vendor]

@@ -1,3 +1,4 @@
+from random import choice
 from django.db import IntegrityError
 from django.db.transaction import atomic
 from django.forms import ValidationError
@@ -272,9 +273,9 @@ class IntegrationTest(TestCase):
         i = 0
         for v in vendors:
             i = increase_vendor_credit_randomly(
-                self, v, i, vendor_transactions_dict)
+                self, v, i, vendor_transactions_dict, randint(101, 1000))
             i = increase_vendor_credit_randomly(
-                self, v, i, vendor_transactions_dict)
+                self, v, i, vendor_transactions_dict, randint(101, 1000))
 
         phone_numbers = add_phone_numbers(self, 3)
         for v in vendors:
@@ -291,5 +292,31 @@ class IntegrationTest(TestCase):
         for v in vendors:
             transactions = vendor_transactions_dict[v]
             self.assertEqual(len(transactions) - 1, i // len(vendors))
+            vendor_credit = sum(transactions)
+            self.assertEqual(v.get_credit(), vendor_credit)
+
+    def test_too_many_transactions(self):
+        vendors = add_vendors(self, 2)
+        vendor_transactions_dict = {}
+        for v in vendors:
+            vendor_transactions_dict[v] = [v.get_credit()]
+
+        for i in range(10):
+            v = choice(vendors)
+            increase_vendor_credit_randomly(
+                self, v, i, vendor_transactions_dict, charge=randint(100_000, 1000_000))
+
+        phone_numbers = add_phone_numbers(self, 30)
+        for j in range(1000):
+            v = choice(vendors)
+            pn = choice(phone_numbers)
+            charge = randint(1, 10)
+            sell_charge(self, j+1, v, pn, charge,
+                        v.get_credit(), pn.charge)
+            transactions = vendor_transactions_dict[v]
+            transactions.append(-charge)
+
+        for v in vendors:
+            transactions = vendor_transactions_dict[v]
             vendor_credit = sum(transactions)
             self.assertEqual(v.get_credit(), vendor_credit)
