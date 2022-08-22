@@ -2,6 +2,7 @@ from abc import abstractmethod
 
 from django.core.validators import RegexValidator
 from django.db import IntegrityError, models
+from django.http import HttpResponseBadRequest
 
 
 class Vendor(models.Model):
@@ -36,6 +37,9 @@ class Transaction(models.Model):
         to=Vendor, on_delete=models.DO_NOTHING, blank=False, null=False)
     amount = models.PositiveIntegerField(blank=False, null=False)
 
+    class Meta:
+        abstract = True
+
     @abstractmethod
     def charge(self, amount: int):
         pass
@@ -49,6 +53,21 @@ class ChargeTransaction(Transaction):
         new_amount = self.vendor.get_credit() + amount
         Vendor.objects.filter(identifier=self.vendor.identifier).update(
             _credit=new_amount)
+
+    @staticmethod
+    def save_model(vendor: Vendor, charge: str):
+        transaction = ChargeTransaction()
+        transaction.vendor = vendor
+        try:
+            charge = int(charge)
+            assert charge >= 0
+        except (ValueError, AssertionError):
+            return HttpResponseBadRequest("charge must be a Positive Integer!")
+
+        transaction.amount = charge
+
+        transaction.charge(charge)
+        transaction.save()
 
 
 class SellTransaction(Transaction):
@@ -68,3 +87,21 @@ class SellTransaction(Transaction):
         new_charge = self.phone_number.charge + amount
         PhoneNumber.objects.filter(phone_number=self.phone_number.phone_number).update(
             charge=new_charge)
+
+    @staticmethod
+    def save_model(vendor: Vendor, phone_number: PhoneNumber, charge: str):
+        transaction = SellTransaction()
+        transaction.vendor = vendor
+        transaction.phone_number = phone_number
+        try:
+            charge = int(charge)
+            assert charge >= 0
+        except (ValueError, AssertionError):
+            return HttpResponseBadRequest("charge must be a Positive Integer!")
+        transaction.amount = charge
+
+        try:
+            transaction.charge(charge)
+        except IntegrityError as e:
+            return HttpResponseBadRequest(e.with_traceback(None))
+        transaction.save()
