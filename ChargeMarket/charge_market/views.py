@@ -6,7 +6,6 @@ from django.shortcuts import get_object_or_404
 
 from .models import *
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -56,17 +55,9 @@ def increase_credit(request: HttpRequest) -> HttpResponse:
         return HttpResponseBadRequest("charge not found!")
 
     vendor = get_object_or_404(Vendor, pk=vendor_id)
-    transaction = ChargeTransaction()
-    transaction.vendor = vendor
-    try:
-        charge = int(charge)
-    except ValueError:
-        return HttpResponseBadRequest("charge must be a Positive Integer!")
-
-    transaction.amount = charge
-
-    transaction.charge(charge)
-    transaction.save()
+    response = ChargeTransaction.save_model(vendor, charge)
+    if response is not None:
+        return response
 
     success_message = f"credit of {vendor} increased successfully {charge}$!"
     logger.info(success_message)
@@ -86,20 +77,9 @@ def sell_charge(request: HttpRequest) -> HttpResponse:
 
     vendor = get_object_or_404(Vendor, pk=vendor_id)
     phone_number = get_object_or_404(PhoneNumber, pk=phone_number)
-    transaction = SellTransaction()
-    transaction.vendor = vendor
-    transaction.phone_number = phone_number
-    try:
-        charge = int(charge)
-    except ValueError:
-        return HttpResponseBadRequest("charge must be a Positive Integer!")
-    transaction.amount = charge
-
-    try:
-        transaction.charge(charge)
-    except IntegrityError as e:
-        return HttpResponseBadRequest(e.with_traceback(None))
-    transaction.save()
+    response = SellTransaction.save_model(vendor, phone_number, charge)
+    if response is not None:
+        return response
 
     success_message = f"{vendor} sold {charge}$ charge to {phone_number}  successfully!"
     logger.info(success_message)

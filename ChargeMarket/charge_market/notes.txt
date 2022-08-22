@@ -1,3 +1,0 @@
-cuncurrent test
-abstract model
-manual test
