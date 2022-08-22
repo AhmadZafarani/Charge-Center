@@ -2,7 +2,7 @@ from random import randint
 
 from django.test import TestCase
 
-from .models import PhoneNumber, Transaction, Vendor
+from .models import ChargeTransaction, PhoneNumber, SellTransaction, Vendor
 
 
 def add_vendor(test_case_obj: TestCase, identifier: int, credit: int) -> Vendor:
@@ -20,8 +20,8 @@ def increase_vendor_credit(test_case_obj: TestCase, identifier: int, vendor_id: 
     response = test_case_obj.client.post(
         '/increase-credit', {"vendor_id": f"{vendor_id}", "charge": f"{charge}"})
     test_case_obj.assertEqual(response.status_code, 200)
-    test_case_obj.assertEqual(Transaction.objects.count(), identifier)
-    transaction = Transaction.objects.all()[identifier - 1]
+    test_case_obj.assertEqual(ChargeTransaction.objects.count(), identifier)
+    transaction = ChargeTransaction.objects.all()[identifier - 1]
     test_case_obj.assertEqual(transaction.identifier, identifier)
     test_case_obj.assertEqual(transaction.amount, charge)
     test_case_obj.assertEqual(transaction.vendor, vendor)
@@ -29,8 +29,7 @@ def increase_vendor_credit(test_case_obj: TestCase, identifier: int, vendor_id: 
     test_case_obj.assertEqual(vendor.get_credit(), first_credit + charge)
 
 
-def add_phone_number(test_case_obj: TestCase, index: int, phone_number_value: str)\
-        -> PhoneNumber:
+def add_phone_number(test_case_obj: TestCase, index: int, phone_number_value: str) -> PhoneNumber:
     response = test_case_obj.client.get(
         f'/add-phone-number?phone_number={phone_number_value}')
     test_case_obj.assertEqual(response.status_code, 200)
@@ -48,8 +47,8 @@ def sell_charge(test_case_obj: TestCase, identifier: int, vendor: Vendor,
         '/sell-charge', {"vendor_id": f"{vendor.identifier}", "phone_number":
                          phone_number.phone_number, "charge": f"{charge}"})
     test_case_obj.assertEqual(response.status_code, 200)
-    test_case_obj.assertEqual(Transaction.objects.count(), identifier)
-    transaction = Transaction.objects.all()[identifier - 1]
+    test_case_obj.assertEqual(SellTransaction.objects.count(), identifier)
+    transaction = SellTransaction.objects.all()[identifier - 1]
     test_case_obj.assertEqual(transaction.identifier, identifier)
     test_case_obj.assertEqual(transaction.amount, charge)
     test_case_obj.assertEqual(transaction.vendor, vendor)
@@ -62,9 +61,9 @@ def sell_charge(test_case_obj: TestCase, identifier: int, vendor: Vendor,
 
 
 def sell_more_than_credit_charge(test_case_obj: TestCase, vendor_id: int,
-                                 phone_number: str, charge: int = 10):
+                                 phone_number: PhoneNumber, charge: int = 10):
     response = test_case_obj.client.post(
-        '/sell-charge', {"vendor_id": f"{vendor_id}", "phone_number": phone_number,
+        '/sell-charge', {"vendor_id": f"{vendor_id}", "phone_number": phone_number.phone_number,
                          "charge": f"{charge}"})
     test_case_obj.assertEqual(response.status_code, 400)
     test_case_obj.assertEqual(response.content.decode(
@@ -91,7 +90,7 @@ def add_phone_numbers(test_case_obj: TestCase, count: int) -> list:
 
 def increase_vendor_credit_randomly(test_case_obj: TestCase, vendor: Vendor, transaction_identifier: int, vendor_transactions_dict: dict) -> int:
     transaction_identifier += 1
-    charge = randint(100, 1000)
+    charge = randint(101, 1000)
     increase_vendor_credit(
         test_case_obj, transaction_identifier, vendor.identifier, charge, vendor.get_credit(), vendor)
     transactions = vendor_transactions_dict[vendor]

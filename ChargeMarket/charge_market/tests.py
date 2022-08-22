@@ -1,4 +1,3 @@
-import imp
 from django.db import IntegrityError
 from django.db.transaction import atomic
 from django.forms import ValidationError
@@ -103,6 +102,14 @@ class IncreaseVendorCreditTests(TestCase):
             '/increase-credit', {"vendor_id": "1", "charge": "200"})
         self.assertEqual(response.status_code, 404)
 
+    def test_increase_not_valid_credit(self):
+        vendor_id = 1
+        first_credit = 21
+        add_vendor(self, vendor_id, first_credit)
+        response = self.client.post(
+            '/increase-credit', {"vendor_id": f"{vendor_id}", "charge": "salam"})
+        self.assertEqual(response.status_code, 400)
+
     def test_increase_vendor_credit(self):
         vendor_id = 1
         first_credit = 21
@@ -182,10 +189,22 @@ class SellChargeTests(TestCase):
         first_credit = 21
         add_vendor(self, vendor_id, first_credit)
         index = 1
-        phone_number = '09356292458'
-        add_phone_number(self, index, phone_number)
+        phone_number_value = '09356292458'
+        phone_number = add_phone_number(self, index, phone_number_value)
         sell_more_than_credit_charge(
             self, vendor_id, phone_number, first_credit+10)
+
+    def test_sell_not_valid_charge(self):
+        vendor_id = 1
+        first_credit = 21
+        add_vendor(self, vendor_id, first_credit)
+        index = 1
+        phone_number_value = '09356292458'
+        add_phone_number(self, index, phone_number_value)
+        response = self.client.post(
+            '/sell-charge', {"vendor_id": f"{vendor_id}", "phone_number": f"{phone_number_value}",
+                             "charge": "-200"})
+        self.assertEqual(response.status_code, 400)
 
     def test_sell_charge(self):
         vendor_id = 1
@@ -196,7 +215,7 @@ class SellChargeTests(TestCase):
         phone_number = add_phone_number(self, index, phone_number_value)
         sell_charge(self, 1, vendor, phone_number, 10, first_credit)
 
-    def one_vendor_sell_charge_to_one_phone_number_multiple_times(self):
+    def test_one_vendor_sell_charge_to_one_phone_number_multiple_times(self):
         vendor_id = 1
         first_credit = 21
         vendor = add_vendor(self, vendor_id, first_credit)
@@ -207,7 +226,7 @@ class SellChargeTests(TestCase):
         sell_charge(self, 2, vendor, phone_number, 10, first_credit-10, 10)
         sell_more_than_credit_charge(self, vendor_id, phone_number)
 
-    def one_vendor_sell_charge_to_multiple_phone_numbers(self):
+    def test_one_vendor_sell_charge_to_multiple_phone_numbers(self):
         vendor_id = 1
         first_credit = 21
         vendor = add_vendor(self, vendor_id, first_credit)
@@ -219,12 +238,12 @@ class SellChargeTests(TestCase):
         phone_number_value = '09356292457'
         phone_number = add_phone_number(self, index, phone_number_value)
         sell_charge(self, 2, vendor, phone_number, 10, first_credit-10)
-        index = 2
+        index = 3
         phone_number_value = '09356292456'
         phone_number = add_phone_number(self, index, phone_number_value)
         sell_more_than_credit_charge(self, vendor_id, phone_number)
 
-    def multiple_vendors_sell_charge_to_one_phone_number(self):
+    def test_multiple_vendors_sell_charge_to_one_phone_number(self):
         vendor_id_1 = 1
         first_credit_1 = 21
         vendor_1 = add_vendor(self, vendor_id_1, first_credit_1)
@@ -259,16 +278,16 @@ class IntegrationTest(TestCase):
 
         phone_numbers = add_phone_numbers(self, 3)
         for v in vendors:
-            for _ in range(10):
+            for j in range(10):
                 i += 1
                 idx = randint(0, len(phone_numbers) - 1)
                 pn = phone_numbers[idx]
                 charge = randint(10, 100)
-                sell_charge(self, i, v, pn, charge, v.get_credit(), pn.charge)
+                sell_charge(self, j+1, v, pn, charge,
+                            v.get_credit(), pn.charge)
                 transactions = vendor_transactions_dict[v]
                 transactions.append(-charge)
 
-        self.assertEqual(Transaction.objects.count(), i)
         for v in vendors:
             transactions = vendor_transactions_dict[v]
             self.assertEqual(len(transactions) - 1, i // len(vendors))
