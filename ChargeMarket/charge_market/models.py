@@ -63,11 +63,14 @@ class ChargeTransaction(Transaction):
             assert charge >= 0
         except (ValueError, AssertionError):
             return HttpResponseBadRequest("charge must be a Positive Integer!")
-
         transaction.amount = charge
 
-        transaction.charge(charge)
-        transaction.save()
+        return transaction.save()
+
+    def save(self, *args, **kwargs):
+        if not ChargeTransaction.objects.filter(identifier=self.identifier).exists():
+            self.charge(self.amount)
+        return super().save(*args, **kwargs)
 
 
 class SellTransaction(Transaction):
@@ -100,8 +103,12 @@ class SellTransaction(Transaction):
             return HttpResponseBadRequest("charge must be a Positive Integer!")
         transaction.amount = charge
 
-        try:
-            transaction.charge(charge)
-        except IntegrityError as e:
-            return HttpResponseBadRequest(e.with_traceback(None))
-        transaction.save()
+        return transaction.save()
+
+    def save(self, *args, **kwargs):
+        if not SellTransaction.objects.filter(identifier=self.identifier).exists():
+            try:
+                self.charge(self.amount)
+            except IntegrityError as e:
+                return HttpResponseBadRequest(e.with_traceback(None))
+        return super().save(*args, **kwargs)
