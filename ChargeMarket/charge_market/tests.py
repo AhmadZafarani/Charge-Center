@@ -1,19 +1,10 @@
 from random import choice
-from django.db import IntegrityError
+
 from django.db.transaction import atomic
-from django.forms import ValidationError
 from django.test import TestCase
 
 from .models import *
 from .test_utils import *
-
-
-class VendorModelTest(TestCase):
-    def test_string_representation(self):
-        vendor = Vendor()
-        vendor.identifier = 1
-        vendor.set_credit(200)
-        self.assertEqual(str(vendor), f"vendor with id: 1 and credit: 200")
 
 
 class AddVendorTests(TestCase):
@@ -64,22 +55,24 @@ class AddPhoneNumberTests(TestCase):
         add_phone_number(self, index, phone_number)
 
     def test_add_phone_number_multiple_times(self):
-        PhoneNumber.objects.create(phone_number='09356292457')
-        with self.assertRaises(IntegrityError):
-            PhoneNumber.objects.create(phone_number='09356292457')
+        index = 1
+        phone_number = '09356292458'
+        add_phone_number(self, index, phone_number)
+        response = self.client.get(
+            f'/add-phone-number?phone_number={phone_number}')
+        self.assertEqual(response.status_code, 400)
 
     def test_add_invalid_phone_number(self):
-        phone_number = PhoneNumber.objects.create(phone_number='salam')
-        with self.assertRaises(ValidationError):
-            phone_number.full_clean()
+        response = self.client.get(f'/add-phone-number?phone_number=salam')
+        self.assertEqual(response.status_code, 400)
 
-        phone_number = PhoneNumber.objects.create(phone_number='1234567890')
-        with self.assertRaises(ValidationError):
-            phone_number.full_clean()
+        response = self.client.get(
+            f'/add-phone-number?phone_number=1234567890')
+        self.assertEqual(response.status_code, 400)
 
-        phone_number = PhoneNumber.objects.create(phone_number='091234567890')
-        with self.assertRaises(ValidationError):
-            phone_number.full_clean()
+        response = self.client.get(
+            f'/add-phone-number?phone_number=091234567890')
+        self.assertEqual(response.status_code, 400)
 
 
 class IncreaseVendorCreditTests(TestCase):

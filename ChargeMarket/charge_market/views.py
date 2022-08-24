@@ -1,8 +1,11 @@
 import logging
 
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.db.utils import DataError
 from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
 
 from .models import *
 
@@ -21,7 +24,7 @@ def add_vendor(request: HttpRequest) -> HttpResponse:
         return HttpResponseBadRequest(error_string)
     try:
         vendor.save()
-    except IntegrityError:
+    except (IntegrityError, DataError):
         return HttpResponseBadRequest(error_string)
 
     success_message = f"{vendor} created successfully!"
@@ -37,15 +40,17 @@ def add_phone_number(request: HttpRequest) -> HttpResponse:
     phone_number.phone_number = phone_number_value
     error_string = "phone number not valid! Example: 09123456789"
     try:
-        phone_number.save()
-    except IntegrityError:
+        phone_number.full_clean()
+    except (IntegrityError, ValidationError):
         return HttpResponseBadRequest(error_string)
+    phone_number.save()
 
     success_message = f"{phone_number} created successfully!"
     logger.info(success_message)
     return HttpResponse(success_message)
 
 
+@csrf_exempt
 def increase_credit(request: HttpRequest) -> HttpResponse:
     vendor_id = request.POST.get("vendor_id")
     if vendor_id is None:
@@ -64,6 +69,7 @@ def increase_credit(request: HttpRequest) -> HttpResponse:
     return HttpResponse(success_message)
 
 
+@csrf_exempt
 def sell_charge(request: HttpRequest) -> HttpResponse:
     vendor_id = request.POST.get("vendor_id")
     if vendor_id is None:

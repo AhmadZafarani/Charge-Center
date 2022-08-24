@@ -81,9 +81,9 @@ def add_vendors(test_case_obj: TestCase, count: int) -> list:
 
 def add_phone_numbers(test_case_obj: TestCase, count: int) -> list:
     phone_numbers = []
-    for i in range(1, count):
-        phone_number_value = f'0935629245{i}'
-        phone_number = add_phone_number(test_case_obj, i, phone_number_value)
+    for i in range(count):
+        phone_number_value = '09{0:09}'.format(i)
+        phone_number = add_phone_number(test_case_obj, i+1, phone_number_value)
         phone_numbers.append(phone_number)
     return phone_numbers
 
